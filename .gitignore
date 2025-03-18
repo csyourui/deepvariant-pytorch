@@ -13,5 +13,3 @@ wheels/
 data/py_model/*
 data/tf_model/*
 data/test/*
-data/pt_confusion_matrix.png
-data/tf_confusion_matrix.png
