@@ -1,0 +1,17 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Data
+data/py_model/*
+data/tf_model/*
+data/test/*
+data/pt_confusion_matrix.png
+data/tf_confusion_matrix.png

@@ -1,0 +1,31 @@
+[project]
+name = "deepvariant-pytorch"
+version = "0.1.0"
+description = "DeepVariant implementation using PyTorch"
+readme = "README.md"
+requires-python = "==3.10.12"
+authors = [
+    { name = "csyourui", email = "csyourui@gmail.com" },
+]
+license = "MIT"
+dependencies = [
+    "keras==2.13.1",
+    "numpy==1.24.3",
+    "scikit-learn==1.6.1",
+    "tensorboard-data-server==0.7.2",
+    "tensorflow-macos==2.13.0", # tensorflow-macos is only available for macOS
+    "tensorflow-addons==0.21.0",
+    "torch==1.13.1",
+    "torchvision==0.14.1",
+    "matplotlib>=3.10.1",
+    "tqdm>=4.67.1",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+    "ruff>=0.11.0",
+]
+
+[tool.ruff.lint]
+extend-select = ["I"]
