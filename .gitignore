@@ -13,3 +13,8 @@ wheels/
 data/py_model/*
 data/tf_model/*
 data/test/*
+
+# Keep empty directories
+!data/py_model/.gitkeep
+!data/tf_model/.gitkeep
+!data/test/.gitkeep
