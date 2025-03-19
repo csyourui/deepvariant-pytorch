@@ -13,7 +13,8 @@ dependencies = [
     "numpy==1.24.3",
     "scikit-learn==1.6.1",
     "tensorboard-data-server==0.7.2",
-    "tensorflow-macos==2.13.0", # tensorflow-macos is only available for macOS
+    "tensorflow-macos==2.13.0; (sys_platform == 'darwin' and platform_machine == 'arm64')",
+    "tensorflow==2.13.0; (sys_platform == 'win32' or sys_platform == 'linux')",
     "tensorflow-addons==0.21.0",
     "torch==1.13.1",
     "torchvision==0.14.1",

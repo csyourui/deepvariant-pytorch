@@ -92,7 +92,8 @@ def run_tf_model(args):
 
 def run_pt_model(args):
     logger.info("Loading PyTorch model...")
-    pt_model = torch.load(args.pt_weights, weights_only=False).to("mps")
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    pt_model = torch.load(args.pt_weights, weights_only=False).to(device)
     pt_model.eval()
     logger.info("Loading validation data...")
     images, labels = load_data(args, "pt")
@@ -105,7 +106,7 @@ def run_pt_model(args):
     softmax = torch.nn.Softmax(dim=1)
     with torch.no_grad():
         for i in tqdm(range(0, len(images), batchsize)):
-            batch_images = images[i : i + batchsize].to("mps")
+            batch_images = images[i : i + batchsize].to(device)
             outputs = pt_model(batch_images)
             outputs = softmax(outputs)
             prediction = torch.argmax(outputs, dim=1)
