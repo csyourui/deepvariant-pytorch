@@ -32,7 +32,7 @@ https://console.cloud.google.com/storage/browser/deepvariant/models/DeepVariant/
 ### 🧪 Test Data
 Test data for validation can be downloaded from:
 ```
-https://console.cloud.google.com/storage/browser/_details/deepvariant/training-case-study/BGISEQ-HG001/1.8.0/customized_training/
+https://console.cloud.google.com/storage/browser/deepvariant/training-case-study/BGISEQ-HG001/1.8.0/customized_training/
 ```
 
 The validation set files follow the pattern: `validation_set.with_label.tfrecord-XXXXX-of-00024.gz`
@@ -63,10 +63,8 @@ After downloading, your data directory should be organized as follows:
 
 ## 🔧 Installation
 
-### Create Environment
-```bash
-uv init --python 3.10.12
-```
+### Install uv
+Use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage dependencies:
 
 ### Install Dependencies
 ```bash
@@ -77,7 +75,7 @@ uv sync
 
 ### Convert TensorFlow Model to PyTorch
 ```bash
-uv run python tf2pytorch.py --weights ./data/tf_model/deepvariant.wgs.ckpt --output ./data/py_model/deepvariant.pt
+uv run python tf2pytorch.py --weights ./data/tf_model/deepvariant.wgs.ckpt --output ./data/pt_model/deepvariant.pt
 ```
 
 ### Run PyTorch Model and TensorFlow Model
@@ -92,12 +90,12 @@ The model produces the following classification metrics:
 ### PyTorch Model Performance
 ```
               precision    recall  f1-score   support
-           0     1.0000    0.9336    0.9657       256
-           1     0.9792    1.0000    0.9895      1320
-           2     1.0000    0.9877    0.9938       892
-    accuracy                         0.9887      2468
-   macro avg     0.9931    0.9738    0.9830      2468
-weighted avg     0.9889    0.9887    0.9886      2468
+           0     1.0000    0.9258    0.9615       256
+           1     0.9800    1.0000    0.9899      1320
+           2     1.0000    0.9910    0.9955       892
+    accuracy                         0.9891      2468
+   macro avg     0.9933    0.9723    0.9823      2468
+weighted avg     0.9893    0.9891    0.9890      2468
 ```
 
 ### TensorFlow Model Performance

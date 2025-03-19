@@ -92,7 +92,7 @@ def run_tf_model(args):
 
 def run_pt_model(args):
     logger.info("Loading PyTorch model...")
-    pt_model = torch.load(args.pt_weights, weights_only=False)
+    pt_model = torch.load(args.pt_weights, weights_only=False).to("mps")
     pt_model.eval()
     logger.info("Loading validation data...")
     images, labels = load_data(args, "pt")
@@ -102,14 +102,14 @@ def run_pt_model(args):
     logger.info("Running predictions...")
     batchsize = 256
     predictions = []
+    softmax = torch.nn.Softmax(dim=1)
     with torch.no_grad():
         for i in tqdm(range(0, len(images), batchsize)):
-            batch_images = images[i : i + batchsize]
+            batch_images = images[i : i + batchsize].to("mps")
             outputs = pt_model(batch_images)
-            softmax = torch.nn.Softmax(dim=1)
             outputs = softmax(outputs)
             prediction = torch.argmax(outputs, dim=1)
-            predictions.extend(prediction.numpy())
+            predictions.extend(prediction.cpu().numpy())
 
     m = confusion_matrix(labels, predictions)
     disp = ConfusionMatrixDisplay(confusion_matrix=m, display_labels=[0, 1, 2])
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pt_weights",
         type=str,
-        default="./data/py_model/deepvariant.pt",
+        default="./data/pt_model/deepvariant.pt",
         help="PyTorch model weights",
     )
     parser.add_argument(
