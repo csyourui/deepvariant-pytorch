@@ -107,6 +107,30 @@ wheels = [
 ]
 
 [[package]]
+name = "crc32c"
+version = "2.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7f/4c/4e40cc26347ac8254d3f25b9f94710b8e8df24ee4dddc1ba41907a88a94d/crc32c-2.7.1.tar.gz", hash = "sha256:f91b144a21eef834d64178e01982bb9179c354b3e9e5f4c803b0e5096384968c", size = 45712 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/75/f8/2c5cc5b8d16c76a66548283d74d1f4979c8970c2a274e63f76fbfaa0cf4e/crc32c-2.7.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:1fd1f9c6b50d7357736676278a1b8c8986737b8a1c76d7eab4baa71d0b6af67f", size = 49668 },
+    { url = "https://files.pythonhosted.org/packages/35/52/cdebceaed37a5657ee4864881da0f29f4036867dfb79bb058d38d4d737f3/crc32c-2.7.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:805c2be1bc0e251c48439a62b0422385899c15289483692bc70e78473c1039f1", size = 37151 },
+    { url = "https://files.pythonhosted.org/packages/1e/33/6476918b4cac85a18e32dc754e9d653b0dcd96518d661cbbf91bf8aec8cc/crc32c-2.7.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f4333e62b7844dfde112dbb8489fd2970358eddc3310db21e943a9f6994df749", size = 35370 },
+    { url = "https://files.pythonhosted.org/packages/ad/fd/8972a70d7c39f37240f554c348fd9e15a4d8d0a548b1bc3139cd4e1cfb66/crc32c-2.7.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6f0fadc741e79dc705e2d9ee967473e8a061d26b04310ed739f1ee292f33674f", size = 54110 },
+    { url = "https://files.pythonhosted.org/packages/35/be/0b045f84c7acc36312a91211190bf84e73a0bbd30f21cbaf3670c4dba9b2/crc32c-2.7.1-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:91ced31055d26d59385d708bbd36689e1a1d604d4b0ceb26767eb5a83156f85d", size = 51792 },
+    { url = "https://files.pythonhosted.org/packages/8c/e2/acaabbc172b7c45ec62f273cd2e214f626e2b4324eca9152dea6095a26f4/crc32c-2.7.1-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:36ffa999b72e3c17f6a066ae9e970b40f8c65f38716e436c39a33b809bc6ed9f", size = 52884 },
+    { url = "https://files.pythonhosted.org/packages/60/40/963ba3d2ec0d8e4a2ceaf90e8f9cb10911a926fe75d4329e013a51343122/crc32c-2.7.1-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:e80114dd7f462297e54d5da1b9ff472e5249c5a2b406aa51c371bb0edcbf76bd", size = 53888 },
+    { url = "https://files.pythonhosted.org/packages/f2/b8/8a093b9dc1792b2cec9805e1428e97be0338a45ac9fae2fd5911613eacb1/crc32c-2.7.1-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:676f5b46da268b5190f9fb91b3f037a00d114b411313664438525db876adc71f", size = 52098 },
+    { url = "https://files.pythonhosted.org/packages/26/76/a254ddb4ae83b545f6e08af384d62268a99d00f5c58a468754f8416468ce/crc32c-2.7.1-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:8d0e660c9ed269e90692993a4457a932fc22c9cc96caf79dd1f1a84da85bb312", size = 52716 },
+    { url = "https://files.pythonhosted.org/packages/b6/cb/6062806e5b6cb8d9af3c62945a5a07fa22c3b4dc59084d2fa2e533f9aaa1/crc32c-2.7.1-cp310-cp310-win32.whl", hash = "sha256:17a2c3f8c6d85b04b5511af827b5dbbda4e672d188c0b9f20a8156e93a1aa7b6", size = 38363 },
+    { url = "https://files.pythonhosted.org/packages/7f/a9/dc935e26c8d7bd4722bc1312ed88f443e6e36816b46835b4464baa3f7c6d/crc32c-2.7.1-cp310-cp310-win_amd64.whl", hash = "sha256:3208764c29688f91a35392073229975dd7687b6cb9f76b919dae442cabcd5126", size = 39795 },
+    { url = "https://files.pythonhosted.org/packages/7f/e0/14d392075db47c53a3890aa110e3640b22fb9736949c47b13d5b5e4599f7/crc32c-2.7.1-pp310-pypy310_pp73-macosx_10_15_x86_64.whl", hash = "sha256:2e83fedebcdeb80c19e76b7a0e5103528bb062521c40702bf34516a429e81df3", size = 36448 },
+    { url = "https://files.pythonhosted.org/packages/03/27/f1dab3066c90e9424d22bc942eecdc2e77267f7e805ddb5a2419bbcbace6/crc32c-2.7.1-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:30004a7383538ef93bda9b22f7b3805bc0aa5625ab2675690e1b676b19417d4b", size = 38184 },
+    { url = "https://files.pythonhosted.org/packages/2c/f3/479acfa99803c261cdd6b44f37b55bd77bdbce6163ec1f51b2014b095495/crc32c-2.7.1-pp310-pypy310_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:a01b0983aa87f517c12418f9898ecf2083bf86f4ea04122e053357c3edb0d73f", size = 38256 },
+    { url = "https://files.pythonhosted.org/packages/7b/31/4edb9c45457c54d51ca539f850761f31b7ab764177902b6f3247ff8c1b75/crc32c-2.7.1-pp310-pypy310_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cb2b963c42128b38872e9ed63f04a73ce1ff89a1dfad7ea38add6fe6296497b8", size = 37868 },
+    { url = "https://files.pythonhosted.org/packages/a6/b0/5680db08eff8f2116a4f9bd949f8bbe9cf260e1c3451228f54c60b110d79/crc32c-2.7.1-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:cdd5e576fee5d255c1e68a4dae4420f21e57e6f05900b38d5ae47c713fc3330d", size = 39826 },
+]
+
+[[package]]
 name = "cycler"
 version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -128,6 +152,7 @@ dependencies = [
     { name = "tensorflow", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
     { name = "tensorflow-addons" },
     { name = "tensorflow-macos", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "tfrecord" },
     { name = "torch" },
     { name = "torchvision" },
     { name = "tqdm" },
@@ -149,6 +174,7 @@ requires-dist = [
     { name = "tensorflow", marker = "sys_platform == 'linux' or sys_platform == 'win32'", specifier = "==2.13.0" },
     { name = "tensorflow-addons", specifier = "==0.21.0" },
     { name = "tensorflow-macos", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'", specifier = "==2.13.0" },
+    { name = "tfrecord", specifier = ">=1.14.5" },
     { name = "torch", specifier = "==1.13.1" },
     { name = "torchvision", specifier = "==0.14.1" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -900,6 +926,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/37/72/88311445fd44c455c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/be/df630c387a0a054815d60be6a97eb4e8f17385d5d6fe660e1c02750062b4/termcolor-2.5.0-py3-none-any.whl", hash = "sha256:37b17b5fc1e604945c2642c872a3764b5d547a48009871aea3edd3afa180afb8", size = 7755 },
 ]
+
+[[package]]
+name = "tfrecord"
+version = "1.14.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "crc32c" },
+    { name = "numpy" },
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/26/f4/70e7a2bf973a6052c0fb44b66c80050aa9477fa7645a5bb16efb2387a975/tfrecord-1.14.5.tar.gz", hash = "sha256:c8a7a69446e981f85fb7059ddd62c3a8eecd18d0de3e1374b4f4189f931ad223", size = 15575 }
 
 [[package]]
 name = "threadpoolctl"

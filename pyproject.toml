@@ -20,6 +20,7 @@ dependencies = [
     "torchvision==0.14.1",
     "matplotlib>=3.10.1",
     "tqdm>=4.67.1",
+    "tfrecord>=1.14.5",
 ]
 
 [dependency-groups]
