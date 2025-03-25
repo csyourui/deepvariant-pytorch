@@ -511,7 +511,20 @@ def run_tf2pytorch(args):
     total_trainable_params = sum(
         p.numel() for p in pt_model.parameters() if p.requires_grad
     )
-    print(f"Total trainable parameters: {total_trainable_params}")
+
+    if args.save_with_net:
+        # 假设 pt_model 是您的 PyTorch 模型
+        pt_model.eval()  # 确保模型处于评估模式
+        # 定义一个示例输入张量
+        example_input = torch.randn(1, 7, 221, 100)
+        # 使用 torch.jit.trace 进行跟踪
+        traced_model = torch.jit.trace(pt_model, example_input)
+        # 保存为 TorchScript 文件
+        traced_model.save(f"{args.output.replace('.pt', '_script.pt')}")
+        # 保存为
+        tf_model.save(f"{args.weights.replace('.ckpt', '.h5')}")
+
+        print(f"Total trainable parameters: {total_trainable_params}")
 
 
 if __name__ == "__main__":
@@ -522,5 +535,8 @@ if __name__ == "__main__":
         "--weights", type=str, required=True, help="TensorFlow model weights"
     )
     parser.add_argument("--output", type=str, required=True, help="Output path")
+    parser.add_argument(
+        "--save_with_net", type=bool, required=False, help="Save with net"
+    )
     args = parser.parse_args()
     run_tf2pytorch(args)

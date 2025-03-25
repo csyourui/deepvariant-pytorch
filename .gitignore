@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # Data
-data/pt_model/*
+data/py_model/*
 data/tf_model/*
 data/test/*
 
@@ -18,3 +18,5 @@ data/test/*
 !data/pt_model/.gitkeep
 !data/tf_model/.gitkeep
 !data/test/.gitkeep
+!data/py_model/deepvariant.pt.png
+!data/tf_model/deepvariant.tf.png

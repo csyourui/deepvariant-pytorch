@@ -1,7 +1,6 @@
 import argparse
 import logging
 
-from tfrecord.torch.dataset import TFRecordDataset
 import matplotlib.pyplot as plt
 import torch
 from sklearn.metrics import (
@@ -9,12 +8,14 @@ from sklearn.metrics import (
     classification_report,
     confusion_matrix,
 )
+from tfrecord.torch.dataset import TFRecordDataset
 from tqdm import tqdm
 
 INPUT_SHAPE = (100, 221, 7)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def load_data_with_tfrecord(args):
     # 定义 TFRecord 的解析规则
@@ -27,8 +28,9 @@ def load_data_with_tfrecord(args):
     dataset = TFRecordDataset(
         args.test_data,
         compression_type="gzip",
-        index_path=None, 
-        description=description)
+        index_path=None,
+        description=description,
+    )
 
     images = []
     labels = []
@@ -45,7 +47,7 @@ def load_data_with_tfrecord(args):
     # 将所有数据堆叠为 PyTorch 张量
     images = torch.stack(images)
     labels = torch.stack(labels)
-    
+
     # 将图像数据转换为 PyTorch 张量
     images = images.view(-1, INPUT_SHAPE[0], INPUT_SHAPE[1], INPUT_SHAPE[2])
     # 将图像数据转换为 float32 类型
@@ -57,10 +59,11 @@ def load_data_with_tfrecord(args):
 
     return images, labels
 
+
 def run_pt_model(args):
     logger.info("Loading PyTorch model...")
     pt_model = torch.load(args.pt_weights, weights_only=False)
-    device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
     logger.info(f"Using device: {device}")
     pt_model.to(device)
     pt_model.eval()
