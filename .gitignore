@@ -12,11 +12,17 @@ wheels/
 # Data
 data/py_model/*
 data/tf_model/*
+data/gguf_model/*
 data/test/*
+
+# tiny_cnn test dir
+tiny_cnn
 
 # Keep empty directories
 !data/pt_model/.gitkeep
 !data/tf_model/.gitkeep
+data/gguf_model/.gitkeep
 !data/test/.gitkeep
-!data/py_model/deepvariant.pt.png
-!data/tf_model/deepvariant.tf.png
+
+# vscode
+.vscode/
