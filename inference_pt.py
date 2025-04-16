@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--pt_weights",
         type=str,
-        default="./data/pt_model/deepvariant.pt",
+        default="./data/py_model/deepvariant.pt",
         help="PyTorch model weights",
     )
     parser.add_argument(

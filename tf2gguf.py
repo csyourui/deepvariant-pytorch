@@ -63,7 +63,9 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
             # 批归一化层权重需要转置为 GGUF 格式
             if len(weight_value.shape) == 1:
                 weight_value = weight_value.reshape((1, -1, 1, 1))  # [1, 1, C, N]
-            # 将偏置转换为 float16
+            # 如果是 moving_variance，则需要加上一个小的常数eps以避免除零错误
+            if "moving_variance" in weight_name:
+                weight_value = weight_value + tf_layer.epsilon
             weight_value = weight_value.astype(np.float32)
 
         if "kernel" in weight_name and "classification" in layer_name:
@@ -143,18 +145,6 @@ def test_model_conversion(tf_model, gguf_path):
     """
     print("\n==== 验证模型转换 ====")
 
-    # 创建随机测试输入
-    np.random.seed(42)  # 设置随机种子以保证结果可重现
-    test_input = np.random.random((1, 100, 221, 7)).astype(np.float32)
-    test_input = np.ones((1, 100, 221, 7), dtype=np.float32)
-    print(f"测试输入形状: {test_input.shape}")
-
-    # 获取 TensorFlow 模型预测结果
-    tf_output = tf_model.predict(test_input)
-    print(f"TensorFlow 模型输出形状: {tf_output.shape}")
-    print(f"TensorFlow 预测概率: {tf_output[0]}")
-    print(f"预测类别: {np.argmax(tf_output[0])}")
-
     # 验证 GGUF 文件是否存在
     if os.path.exists(gguf_path):
         file_size_mb = os.path.getsize(gguf_path) / (1024 * 1024)
@@ -165,6 +155,17 @@ def test_model_conversion(tf_model, gguf_path):
         return
 
     display_gguf_info(gguf_path)
+    # 创建随机测试输入
+    np.random.seed(42)  # 设置随机种子以保证结果可重现
+    test_input = np.random.random((1, 100, 221, 7)).astype(np.float32)
+    test_input = 0.1 * np.ones((1, 100, 221, 7), dtype=np.float32)
+    print(f"测试输入形状: {test_input.shape}")
+
+    # 获取 TensorFlow 模型预测结果
+    tf_output = tf_model.predict(test_input)
+    print(f"TensorFlow 模型输出形状: {tf_output.shape}")
+    print(f"TensorFlow 预测概率: {tf_output[0]}")
+    print(f"预测类别: {np.argmax(tf_output[0])}")
 
 
 def display_gguf_info(gguf_path):
