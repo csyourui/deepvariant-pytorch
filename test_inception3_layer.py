@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import yaml
 
 from pytorch_model.inception import Inception3
@@ -316,204 +317,27 @@ def save_results_to_yaml(results: Dict[str, Any], filename: str):
     logger.info(f"结果已保存到: {filename}")
 
 
-def test_inception_conv2d_1a_layer(args):
+def convert_conv2d_weights_to_fp16(model):
     """
-    单元测试函数，专门测试Inception模型的Conv2d_1a_3x3层
+    将模型中所有卷积层的权重转换为float16格式
+
+    Args:
+        model: 待转换的PyTorch模型
     """
-    # 设置设备
-    device = torch.device(
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
-    )
+    conversion_count = 0
 
-    logger.info(f"使用设备: {device}")
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d):
+            # 保存原始权重形状
+            original_shape = module.weight.data.shape
 
-    # 创建输入数据
-    input_shape = (args.batch_size, args.channels, args.height, args.width)
-    input_tensor = 0.5 * torch.ones(input_shape).to(device)
-    logger.info(f"创建值为0.1的输入张量，形状为 {input_shape}")
+            # 转换为fp16，然后再转回来，实现精度截断效果
+            module.weight.data = module.weight.data.half().float()
 
-    # 创建模型
-    model_shape = (args.height, args.width, args.channels)
-    model = InceptionShapeTracker(
-        input_shape=model_shape,
-        num_classes=args.num_classes,
-        aux_logits=args.aux_logits,
-        transform_input=args.transform_input,
-        verbose=False,
-    ).to(device)
+            conversion_count += 1
+            logger.info(f"转换卷积层权重为fp16: {name}, 形状: {original_shape}")
 
-    # 加载权重文件（如果有）
-    if args.weights_path and os.path.exists(args.weights_path):
-        loaded_model = torch.load(args.weights_path, map_location=device)
-        model.load_state_dict(loaded_model.state_dict())
-        logger.info(f"成功加载权重文件: {args.weights_path}")
-        weights_info = "with_pretrained_weights"
-    else:
-        if args.weights_path:
-            logger.warning(f"指定的权重文件不存在: {args.weights_path}")
-        logger.info("使用随机初始化的权重")
-        weights_info = "random_weights"
-
-    # 设置为评估模式
-    model.eval()
-
-    logger.info("\n" + "=" * 80)
-    logger.info("开始测试 Conv2d_1a_3x3 层")
-    logger.info("=" * 80 + "\n")
-
-    # 执行Conv2d_1a_3x3层测试
-    with torch.no_grad():
-        results = model.test_conv2d_1a_layer(input_tensor)
-
-    # 创建用于YAML的结果字典
-    yaml_results = {
-        "test_info": {
-            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "device": str(device),
-            "input_shape": input_shape,
-            "model_config": {
-                "height": args.height,
-                "width": args.width,
-                "channels": args.channels,
-                "num_classes": args.num_classes,
-                "weights": weights_info,
-            },
-        },
-        "conv2d_1a_test": {},
-    }
-
-    # 打印测试结果并添加到YAML结果中
-    logger.info(f"输入张量形状: {results['input'].shape}")
-    logger.info(f"输入张量示例: {model._format_tensor_output(results['input'])}")
-    yaml_results["conv2d_1a_test"]["input"] = {
-        "shape": list(results["input"].shape),
-        "sample": results["input"][0, 0, 0, :10].cpu().numpy().tolist(),
-    }
-
-    logger.info("\n" + "-" * 40 + "卷积层结果" + "-" * 40)
-    logger.info(f"卷积输出形状: {results['conv_output'].shape}")
-    logger.info(f"卷积输出示例: {model._format_tensor_output(results['conv_output'])}")
-    yaml_results["conv2d_1a_test"]["conv_output"] = {
-        "shape": list(results["conv_output"].shape),
-        "sample": results["conv_output"][0, 0, 0, :10].cpu().numpy().tolist(),
-        "stats": {
-            "min": float(results["conv_output"].min().item()),
-            "max": float(results["conv_output"].max().item()),
-            "mean": float(results["conv_output"].mean().item()),
-            "std": float(results["conv_output"].std().item()),
-        },
-    }
-
-    logger.info("\n" + "-" * 40 + "BatchNorm参数" + "-" * 40)
-    bn_mean = results["bn_running_mean"].cpu().numpy()
-    bn_var = results["bn_running_var"].cpu().numpy()
-    bn_weight = results["bn_weight"].cpu().numpy()
-    bn_bias = results["bn_bias"].cpu().numpy()
-
-    logger.info(f"Running Mean: {np.array2string(bn_mean, precision=4)}")
-    logger.info(f"Running Var: {np.array2string(bn_var, precision=4)}")
-    logger.info(f"Weight: {np.array2string(bn_weight, precision=4)}")
-    logger.info(f"Bias: {np.array2string(bn_bias, precision=4)}")
-    logger.info(f"Epsilon: {results['bn_eps']}")
-
-    yaml_results["conv2d_1a_test"]["bn_params"] = {
-        "running_mean": bn_mean.tolist(),
-        "running_var": bn_var.tolist(),
-        "weight": bn_weight.tolist(),
-        "bias": bn_bias.tolist(),
-        "epsilon": results["bn_eps"],
-    }
-
-    logger.info("\n" + "-" * 40 + "BatchNorm计算过程" + "-" * 40)
-    # 为每个BatchNorm计算步骤添加YAML数据
-    for step_name, step_key in [
-        ("中心化", "bn_centered"),
-        ("标准差倒数", "bn_inv_std"),
-        ("归一化", "bn_normalized"),
-        ("缩放和偏移", "bn_output"),
-    ]:
-        step_num = ["中心化", "标准差倒数", "归一化", "缩放和偏移"].index(step_name) + 1
-        logger.info(f"{step_num}. {step_name}后形状: {results[step_key].shape}")
-        logger.info(f"   示例值: {model._format_tensor_output(results[step_key])}")
-
-        yaml_results["conv2d_1a_test"][step_key] = {
-            "shape": list(results[step_key].shape),
-            "sample": results[step_key][0, 0, 0, :10].cpu().numpy().tolist(),
-            "stats": {
-                "min": float(results[step_key].min().item()),
-                "max": float(results[step_key].max().item()),
-                "mean": float(results[step_key].mean().item()),
-                "std": float(results[step_key].std().item()),
-            },
-        }
-
-    logger.info("\n" + "-" * 40 + "最终结果" + "-" * 40)
-    logger.info(f"PyTorch BatchNorm输出形状: {results['actual_bn_output'].shape}")
-    logger.info(
-        f"PyTorch BatchNorm输出示例: {model._format_tensor_output(results['actual_bn_output'])}"
-    )
-
-    yaml_results["conv2d_1a_test"]["actual_bn_output"] = {
-        "shape": list(results["actual_bn_output"].shape),
-        "sample": results["actual_bn_output"][0, 0, 0, :10].cpu().numpy().tolist(),
-        "stats": {
-            "min": float(results["actual_bn_output"].min().item()),
-            "max": float(results["actual_bn_output"].max().item()),
-            "mean": float(results["actual_bn_output"].mean().item()),
-            "std": float(results["actual_bn_output"].std().item()),
-        },
-    }
-
-    logger.info(f"\n手动计算与PyTorch实现是否一致: {results['calculation_matches']}")
-    yaml_results["conv2d_1a_test"]["calculation_matches"] = results[
-        "calculation_matches"
-    ]
-
-    if not results["calculation_matches"]:
-        # 如果结果不一致，计算差异
-        diff = torch.abs(results["bn_output"] - results["actual_bn_output"])
-        max_diff = diff.max().item()
-        mean_diff = diff.mean().item()
-        logger.info(f"最大差异: {max_diff:.6e}")
-        logger.info(f"平均差异: {mean_diff:.6e}")
-
-        yaml_results["conv2d_1a_test"]["diff"] = {"max": max_diff, "mean": mean_diff}
-
-    logger.info("\n" + "-" * 40 + "ReLU激活" + "-" * 40)
-    logger.info(f"ReLU输出形状: {results['relu_output'].shape}")
-    logger.info(f"ReLU输出示例: {model._format_tensor_output(results['relu_output'])}")
-    yaml_results["conv2d_1a_test"]["relu_output"] = {
-        "shape": list(results["relu_output"].shape),
-        "sample": results["relu_output"][0, 0, 0, :10].cpu().numpy().tolist(),
-        "stats": {
-            "min": float(results["relu_output"].min().item()),
-            "max": float(results["relu_output"].max().item()),
-            "mean": float(results["relu_output"].mean().item()),
-            "std": float(results["relu_output"].std().item()),
-        },
-    }
-
-    # 生成输出文件名
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
-    os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(
-        output_dir, f"conv2d_1a_test_{weights_info}_{timestamp}.yaml"
-    )
-
-    # 保存YAML结果
-    with open(output_file, "w") as f:
-        yaml.dump(yaml_results, f, default_flow_style=False)
-
-    logger.info(f"\n测试结果已保存到YAML文件: {output_file}")
-
-    logger.info("\n" + "=" * 80)
-    logger.info("Conv2d_1a_3x3 层测试完成")
-    logger.info("=" * 80)
+    logger.info(f"总共转换了 {conversion_count} 个卷积层权重为fp16格式")
 
 
 def run_inception_shape_test(args):
@@ -529,11 +353,13 @@ def run_inception_shape_test(args):
         else "cpu"
     )
 
+    device = torch.device("cpu")  # 强制使用CPU
+
     logger.info(f"Using device: {device}")
 
     # 创建输入数据 - 全1张量
     input_shape = (args.batch_size, args.channels, args.height, args.width)
-    input_tensor = 0.1 * torch.ones(input_shape).to(device)
+    input_tensor = 0.5 * torch.ones(input_shape).to(device)
     logger.info(f"Created all-ones input tensor with shape {input_shape}")
 
     # 设置是否加载权重（如果提供了权重路径）
@@ -563,6 +389,12 @@ def run_inception_shape_test(args):
         loaded_model = torch.load(args.weights_path, map_location=device)
         model.load_state_dict(loaded_model.state_dict())
         logger.info("成功加载权重文件")
+
+        # 如果需要将卷积层权重转换为fp16格式
+        if args.convert_to_fp16:
+            logger.info("开始将卷积层权重转换为fp16格式...")
+            convert_conv2d_weights_to_fp16(model)
+            weights_info = "with_fp16_weights"
 
     # 设置为评估模式
     model.eval()
@@ -602,13 +434,30 @@ def run_inception_shape_test(args):
     def capturing_forward(x):
         record_layer_output("input", x)
 
-        # Conv2d_1a_3x3
-        x = model.Conv2d_1a_3x3(x)
-        record_layer_output("Conv2d_1a_3x3", x)
+        # # Conv2d_1a_3x3
+        # x = model.Conv2d_1a_3x3(x)
+        # record_layer_output("Conv2d_1a_3x3", x)
+
+        conv_1a_3x3_layer = model.Conv2d_1a_3x3.conv
+        bn_1a_3x3_layer = model.Conv2d_1a_3x3.bn
+        x = conv_1a_3x3_layer(x)
+        record_layer_output("Conv2d_1a_3x3_conv", x)
+        x = bn_1a_3x3_layer(x)
+        record_layer_output("Conv2d_1a_3x3_bn", x)
+        x = F.relu(x, inplace=True)
+        record_layer_output("Conv2d_1a_3x3_relu", x)
 
         # Conv2d_2a_3x3
         x = model.Conv2d_2a_3x3(x)
         record_layer_output("Conv2d_2a_3x3", x)
+
+        # # Conv2d_2a_3x3
+        # conv_2a_3x3_layer = model.Conv2d_2a_3x3.conv
+        # bn_2a_3x3_layer = model.Conv2d_2a_3x3.bn
+        # x = conv_2a_3x3_layer(x)
+        # record_layer_output('Conv2d_2a_3x3_conv', x)
+        # x = bn_2a_3x3_layer(x)
+        # record_layer_output('Conv2d_2a_3x3_bn', x)
 
         # Conv2d_2b_3x3
         x = model.Conv2d_2b_3x3(x)
@@ -625,14 +474,6 @@ def run_inception_shape_test(args):
         # Conv2d_4a_3x3
         x = model.Conv2d_4a_3x3(x)
         record_layer_output("Conv2d_4a_3x3", x)
-
-        # # Conv2d_4a_3x3
-        # conv_4a_3x3_layer = model.Conv2d_4a_3x3.conv
-        # bn_4a_3x3_layer = model.Conv2d_4a_3x3.bn
-        # x = conv_4a_3x3_layer(x)
-        # record_layer_output('Conv2d_4a_3x3_conv', x)
-        # x = bn_4a_3x3_layer(x)
-        # record_layer_output('Conv2d_4a_3x3_bn', x)
 
         # maxpool2
         x = model.maxpool2(x)
@@ -780,6 +621,9 @@ if __name__ == "__main__":
         help="测试模式：full(全模型) 或 conv2d_1a(只测试第一层)",
     )
     parser.add_argument("--output_dir", type=str, default=None, help="输出结果保存目录")
+    parser.add_argument(
+        "--convert_to_fp16", action="store_true", help="将卷积层权重转换为fp16格式"
+    )
 
     args = parser.parse_args()
 
@@ -788,7 +632,4 @@ if __name__ == "__main__":
         output_dir = args.output_dir
         os.makedirs(output_dir, exist_ok=True)
 
-    if args.test_mode.lower() == "conv2d_1a":
-        test_inception_conv2d_1a_layer(args)
-    else:
-        run_inception_shape_test(args)
+    run_inception_shape_test(args)

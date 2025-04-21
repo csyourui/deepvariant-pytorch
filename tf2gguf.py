@@ -55,8 +55,6 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
                 # TensorFlow: [H, W, input_channels, output_channels]
                 # GGUF: [output_channels, input_channels, H, W]
                 weight_value = np.transpose(weight_value, (3, 2, 0, 1))
-
-            # 将权重转换为 float16 以节省空间
             weight_value = weight_value.astype(np.float16)
 
         if "batch_normalization" in layer_name:
@@ -77,13 +75,11 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
                 weight_value = weight_value.reshape(
                     (1, 1, weight_value.shape[0], weight_value.shape[1])
                 )
-            # 将权重转换为 float16 以节省空间
             weight_value = weight_value.astype(np.float16)
 
         if "bias" in weight_name and "classification" in layer_name:
             if len(weight_value.shape) == 1:
                 weight_value = weight_value.reshape((1, 1, 1, weight_value.shape[0]))
-            # 将偏置转换为 float16
             weight_value = weight_value.astype(np.float32)
 
         # 构造 GGUF 参数名称

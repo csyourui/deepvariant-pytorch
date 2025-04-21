@@ -87,9 +87,18 @@ else()
     
     # 检查 ggml 源目录是否存在
     if(NOT EXISTS ${GGML_SOURCE_DIR})
-        message(FATAL_ERROR "GGML source directory not found at ${GGML_SOURCE_DIR}. 
-            Please clone the ggml repository: 
-            git clone https://github.com/ggerganov/ggml.git ${GGML_SOURCE_DIR}")
+        # message(FATAL_ERROR "GGML source directory not found at ${GGML_SOURCE_DIR}. 
+        #     Please clone the ggml repository: 
+        #     git clone https://github.com/ggerganov/ggml.git ${GGML_SOURCE_DIR}")
+        include(FetchContent)
+        FetchContent_Declare(
+            ggml
+            GIT_REPOSITORY https://github.com/ggml-org/ggml
+        )
+        FetchContent_MakeAvailable(ggml)
+        # FetchContent 会创建一个变量 ggml_SOURCE_DIR，包含下载的源代码路径
+        set(GGML_SOURCE_DIR ${ggml_SOURCE_DIR} CACHE PATH "Path to ggml source" FORCE)
+        message(STATUS "GGML source directory not found. Cloned ggml repository.")
     endif()
     
     # 设置 GGML 编译选项 - 禁用测试和示例
@@ -98,7 +107,7 @@ else()
  
     include_directories(${GGML_SOURCE_DIR}/include)
     include_directories(${GGML_SOURCE_DIR}/src)
-    add_subdirectory(${GGML_SOURCE_DIR} ${CMAKE_BINARY_DIR}/ggml-build)
+    # add_subdirectory(${GGML_SOURCE_DIR} ${CMAKE_BINARY_DIR}/ggml-build)
 
     # 如果在 Apple 平台，添加 Metal 支持
     if(APPLE)
@@ -167,13 +176,37 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(inception3 PRIVATE -Wall -Wextra)
 endif()
 
+# 添加pybind11支持
+option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
+
+if(BUILD_PYTHON_BINDINGS)
+    # 查找Python解释器
+    find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    message(STATUS "Found Python: ${Python_EXECUTABLE} (version: ${Python_VERSION})")
+    
+    # 查找pybind11
+    find_package(pybind11 CONFIG)
+    if(NOT pybind11_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            pybind11
+            GIT_REPOSITORY https://github.com/pybind/pybind11.git
+            GIT_TAG        v2.11.1
+        )
+        FetchContent_MakeAvailable(pybind11)
+    endif()
+    
+    # 添加Python绑定构建
+    include(${CMAKE_CURRENT_SOURCE_DIR}/pybind11_inception3_bindings.cmake)
+endif()
+
 ############################################################################## 
 
 # 设置 inception3 源文件
 set(TEST_INECPTION3_SOURCES
     inception3.cpp
     utils.cpp
-    test_inception3_layer.cpp
+    test/test_inception3_layer.cpp
 )
 
 # 添加可执行文件，用于测试

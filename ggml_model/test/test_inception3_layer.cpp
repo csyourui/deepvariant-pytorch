@@ -273,7 +273,7 @@ bool test_inception_conv2d_1a_layer(const std::string& model_path) {
     // fill_random_input(model);
     float * data0 = new float[model.width * model.height * model.channels];
     for (int i = 0; i < model.width * model.height * model.channels; i++) {
-        data0[i] = 0.1f;
+        data0[i] = 0.5f;
     }
     ggml_backend_tensor_set(input, data0, 0, ggml_nbytes(input));
     delete[] data0;

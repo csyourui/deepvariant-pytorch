@@ -26,3 +26,5 @@ data/gguf_model/.gitkeep
 
 # vscode
 .vscode/
+data/.DS_Store
+.DS_Store

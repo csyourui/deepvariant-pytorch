@@ -1017,7 +1017,7 @@ bool Inception3Model::load_model(const std::string& fname) {
         snprintf(name, sizeof(name), "conv2d_kernel");
         conv2d_layers[0].weights = ggml_get_tensor(ctx, name);
         GGML_ASSERT(conv2d_layers[0].weights != NULL);
-        GGML_ASSERT(conv2d_layers[0].weights->type == GGML_TYPE_F16);
+        // GGML_ASSERT(conv2d_layers[0].weights->type == GGML_TYPE_F16);
 
         if (conv2d_layers[0].batch_normalize) {
             snprintf(name, sizeof(name), "batch_normalization_beta");
@@ -1042,7 +1042,7 @@ bool Inception3Model::load_model(const std::string& fname) {
         snprintf(name, sizeof(name), "conv2d_%d_kernel", i);
         conv2d_layers[i].weights = ggml_get_tensor(ctx, name);
         GGML_ASSERT(conv2d_layers[i].weights != NULL);
-        GGML_ASSERT(conv2d_layers[i].weights->type == GGML_TYPE_F16);
+        // GGML_ASSERT(conv2d_layers[i].weights->type == GGML_TYPE_F16);
         
         if (conv2d_layers[i].batch_normalize) {
             snprintf(name, sizeof(name), "batch_normalization_%d_beta", i);
@@ -1067,7 +1067,7 @@ bool Inception3Model::load_model(const std::string& fname) {
         snprintf(name, sizeof(name), "classification_kernel");
         dense_layers[0].kernel = ggml_get_tensor(ctx, name);
         GGML_ASSERT(dense_layers[0].kernel != NULL);
-        GGML_ASSERT(dense_layers[0].kernel->type == GGML_TYPE_F16);
+        // GGML_ASSERT(dense_layers[0].kernel->type == GGML_TYPE_F16);
         
         snprintf(name, sizeof(name), "classification_bias");
         dense_layers[0].biases = ggml_get_tensor(ctx, name);
@@ -1077,11 +1077,6 @@ bool Inception3Model::load_model(const std::string& fname) {
 
     return true;
 }
-
-// // 创建并返回 Inception3 模型实例
-// std::unique_ptr<Inception3> Inception3Model::create_model(bool use_aux_logits = false) {
-//     return std::make_unique<Inception3>(ctx, *this, use_aux_logits);
-// }
 
 // 构建计算图
 struct ggml_cgraph* Inception3Model::build_graph() {
@@ -1190,7 +1185,7 @@ bool test_inception3_layer(const std::string& model_path, const std::string& lay
     std::unique_ptr<Inception3> inception3 = std::make_unique<Inception3>(ctx_cgraph, model, false);
     
     // 创建输入张量
-    struct ggml_tensor* input = ggml_new_tensor_4d(ctx_cgraph, GGML_TYPE_F32, model.width, model.height, model.channels, 1);
+    struct ggml_tensor* input = ggml_new_tensor_4d(ctx_cgraph, GGML_TYPE_F32, model.width, model.height, model.channels, 2);
     ggml_set_name(input, "input");
     ggml_set_input(input);
     
@@ -1345,7 +1340,7 @@ bool test_inception3_layer(const std::string& model_path, const std::string& lay
     
     // 打印目标层的输出
     printf("\n=== %s 层的输出 ===\n", layer_name.c_str());
-    print_tensor_info(layer_name.c_str(), result, 3);
+    print_tensor_info(layer_name.c_str(), result);
     
     // 释放资源
     ggml_free(ctx_cgraph);
