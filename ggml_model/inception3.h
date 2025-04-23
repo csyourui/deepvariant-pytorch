@@ -96,7 +96,7 @@ public:
     bool load_model(const std::string& fname);
     
     // 构建计算图
-    struct ggml_cgraph* build_graph();
+    struct ggml_cgraph* build_graph(int batch_size = 1);
 
     // Getters 和 Setters
     ggml_context* get_context() const;

@@ -28,7 +28,6 @@
 #include "inception3.h"  // 包含Inception3模型定义
 using inception::Inception3Model;
 
-
 // 为 model.images 创建随机输入
 void fill_random_input(Inception3Model& model, int seed = 42) {
     // 初始化随机数生成器
@@ -57,27 +56,51 @@ void fill_random_input(Inception3Model& model, int seed = 42) {
 }
 
 // 测试 Inception3 模型
-void test_inception3(struct ggml_cgraph* gf, Inception3Model& model) {
+void test_inception3(struct ggml_cgraph* gf, Inception3Model& model, int batch_size, int loop_count) {
     struct ggml_tensor* input = ggml_graph_get_tensor(gf, "images");
     struct ggml_tensor* output = ggml_graph_get_tensor(gf, "classification");
     
     // 设置输入张量，使用随机数据
     // fill_random_input(model);
-    float * data0 = (float *)malloc( model.width * model.height * model.channels);
-    for (int i = 0; i < model.width * model.height * model.channels; i++) {
-        data0[i] = 0.1f;
-    }
-    ggml_backend_tensor_set(input, data0, 0, ggml_nbytes(input));
-    free(data0);
+    // float * data0 = (float *)malloc( model.width * model.height * model.channels * batch_size);
+    // float * data0 = new float[ggml_nbytes(input)];
+    // for (int i = 0; i < model.width * model.height * model.channels * batch_size; i++) {
+    //     data0[i] = 0.1f;
+    // }
+    // ggml_backend_tensor_set(input, data0, 0, ggml_nbytes(input));
+    // delete[] data0;
     
     // 执行推理
-    model.infer(gf);
+    for (int i = 0; i < loop_count; i++) {
+        printf("第 %d 次推理...\n", i + 1);
+        const int64_t t_start_ms = ggml_time_ms();
+        
+        if (ggml_backend_graph_compute(model.backend, gf) != GGML_STATUS_SUCCESS) {
+            fprintf(stderr, "执行计算失败\n");
+            return;
+        }
+        
+        const int64_t t_end_ms = ggml_time_ms();
+        printf("推理完成，用时: %lld ms\n", t_end_ms - t_start_ms);
+    }
 }
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        fprintf(stderr, "用法: %s model.gguf\n", argv[0]);
+        fprintf(stderr, "用法: %s <model-path> [batch-size] [loop-conut]\n", argv[0]);
         return 1;
+    }
+
+    // 设置默认批次大小
+    int batch_size = 1;
+    int loop_count = 1;
+    if (argc < 3) {
+        fprintf(stderr, "默认批次大小: %d 默认循环次数: %d\n", batch_size, loop_count);
+    } else if (argc == 3) {
+        batch_size = atoi(argv[2]);
+    } else if (argc == 4) {
+        batch_size = atoi(argv[2]);
+        loop_count = atoi(argv[3]);
     }
     
     // 创建内存缓冲区用于计算图
@@ -103,7 +126,7 @@ int main(int argc, char** argv) {
     
     // 构建计算图
     printf("正在构建计算图...\n");
-    struct ggml_cgraph* gf = model.build_graph();
+    struct ggml_cgraph* gf = model.build_graph(batch_size);
     if (gf == NULL) {
         fprintf(stderr, "构建计算图失败\n");
         ggml_free(ctx_cgraph);
@@ -126,7 +149,7 @@ int main(int argc, char** argv) {
     printf("计算图已保存到 inception3_graph.dot\n");
     
     // 测试模型
-    test_inception3(gf, model);
+    test_inception3(gf, model, batch_size, loop_count);
     
     // 释放资源
     printf("正在释放资源...\n");

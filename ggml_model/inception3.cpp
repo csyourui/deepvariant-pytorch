@@ -1079,12 +1079,12 @@ bool Inception3Model::load_model(const std::string& fname) {
 }
 
 // 构建计算图
-struct ggml_cgraph* Inception3Model::build_graph() {
+struct ggml_cgraph* Inception3Model::build_graph(int batch_size) {
     struct ggml_cgraph* gf = ggml_new_graph(ctx);
     bool use_aux_logits = false;
     
     // 创建输入张量
-    images = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, width, height, channels, 1);
+    images = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, width, height, channels, batch_size);
     ggml_set_name(images, "images");
     ggml_set_input(images);
     
@@ -1185,7 +1185,7 @@ bool test_inception3_layer(const std::string& model_path, const std::string& lay
     std::unique_ptr<Inception3> inception3 = std::make_unique<Inception3>(ctx_cgraph, model, false);
     
     // 创建输入张量
-    struct ggml_tensor* input = ggml_new_tensor_4d(ctx_cgraph, GGML_TYPE_F32, model.width, model.height, model.channels, 2);
+    struct ggml_tensor* input = ggml_new_tensor_4d(ctx_cgraph, GGML_TYPE_F32, model.width, model.height, model.channels, 1);
     ggml_set_name(input, "input");
     ggml_set_input(input);
     

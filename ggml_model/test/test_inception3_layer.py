@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
@@ -9,6 +10,8 @@ import torch
 import torch.nn.functional as F
 import yaml
 
+# 将项目根目录添加到 Python 路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from pytorch_model.inception import Inception3
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -419,7 +422,7 @@ def run_inception_shape_test(args):
     # 为了收集所有层的输出形状，我们需要在前向传播过程中记录
     def record_layer_output(name, tensor):
         shapes_data["layer_shapes"][name] = {
-            "shape": list(tensor.shape),
+            "shape": str(tensor.shape),
             "stats": {
                 "min": float(tensor.min().item()),
                 "max": float(tensor.max().item()),

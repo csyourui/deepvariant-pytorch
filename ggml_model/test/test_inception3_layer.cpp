@@ -62,7 +62,7 @@ public:
     }
     
     // 构建计算图
-    ggml_cgraph* build_graph() {
+    ggml_cgraph* build_graph(int batch_size = 1) {
         std::string name = layer_name;
         // 创建一个新的计算图
         struct ggml_cgraph* gf = ggml_new_graph(ctx);
