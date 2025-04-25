@@ -151,120 +151,15 @@ if(BUILD_PYTHON_BINDINGS)
     include(${CMAKE_CURRENT_SOURCE_DIR}/pybind11_inception3_bindings.cmake)
 endif()
 
-############################################################################## 
-
-# 设置 inception3 源文件
-set(INECPTION3_SOURCES
-    inception3.cpp
-    utils.cpp
-    test/test_inception3.cpp
-)
-
-# 添加自定义的头文件目录
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
-# 添加可执行文件
-add_executable(test_inception3 ${INECPTION3_SOURCES})
-
-# 如果使用自定义 ggml，添加源文件到目标
-if(NOT USE_SYSTEM_GGML)
-    target_sources(test_inception3 PRIVATE ${GGML_SOURCES})
-    
-    # 为 Apple 平台添加 Metal 相关内容
-    if(APPLE)
-        target_sources(test_inception3 PRIVATE ${CMAKE_BINARY_DIR}/ggml-metal.metallib)
-        set_source_files_properties(${CMAKE_BINARY_DIR}/ggml-metal.metallib PROPERTIES
-            GENERATED TRUE
-            MACOSX_PACKAGE_LOCATION Resources
-        )
-        
-        # 告诉编译器我们正在使用 Metal
-        target_compile_definitions(test_inception3 PRIVATE -DGGML_USE_METAL=1)
-    endif()
-    target_link_libraries(test_inception3 PRIVATE ggml ggml-base ggml-metal ggml-cpu ggml-blas)
-else()
-    target_link_libraries(test_inception3 PRIVATE ${GGML_LIBRARIES})
-endif()
-
-# 链接必要的库
-target_link_libraries(test_inception3 PRIVATE Threads::Threads)
-
-# 为 Apple 平台添加特定的库链接
-if(APPLE)
-    target_link_libraries(test_inception3 PRIVATE
-        ${ACCELERATE_LIBRARY}
-        ${METAL_LIBRARY}
-        ${FOUNDATION_LIBRARY}
-        ${MODELIO_LIBRARY}
-        ${METALKIT_LIBRARY}
-    )
-endif()
-
-# 如果启用了 OpenMP
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(test_inception3 PRIVATE OpenMP::OpenMP_CXX)
-endif()
-
-# 添加更多编译选项
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(test_inception3 PRIVATE -Wall -Wextra)
-endif()
 
 ############################################################################## 
 
-# 设置 inception3 源文件
-set(TEST_INECPTION3_SOURCES
-    inception3.cpp
-    utils.cpp
-    test/test_inception3_layer.cpp
-)
-
-# 添加可执行文件，用于测试
-add_executable(test_inception3_layer ${TEST_INECPTION3_SOURCES})
-
-# 如果使用自定义 ggml，添加源文件到目标
-if(NOT USE_SYSTEM_GGML)
-    target_sources(test_inception3_layer PRIVATE ${GGML_SOURCES})
-    
-    # 为 Apple 平台添加 Metal 相关内容
-    if(APPLE)
-        target_sources(test_inception3_layer PRIVATE ${CMAKE_BINARY_DIR}/ggml-metal.metallib)
-        set_source_files_properties(${CMAKE_BINARY_DIR}/ggml-metal.metallib PROPERTIES
-            GENERATED TRUE
-            MACOSX_PACKAGE_LOCATION Resources
-        )
-        
-        # 告诉编译器我们正在使用 Metal
-        target_compile_definitions(test_inception3_layer PRIVATE -DGGML_USE_METAL=1)
-    endif()
-    target_link_libraries(test_inception3_layer PRIVATE ggml ggml-base ggml-metal ggml-cpu ggml-blas)
-else()
-    target_link_libraries(test_inception3_layer PRIVATE ${GGML_LIBRARIES})
+# 添加可选的测试代码编译
+option(BUILD_TESTS "Build test programs" OFF)
+if(BUILD_TESTS)
+    add_subdirectory(test)
 endif()
 
-# 链接必要的库
-target_link_libraries(test_inception3_layer PRIVATE Threads::Threads)
-
-# 为 Apple 平台添加特定的库链接
-if(APPLE)
-    target_link_libraries(test_inception3_layer PRIVATE
-        ${ACCELERATE_LIBRARY}
-        ${METAL_LIBRARY}
-        ${FOUNDATION_LIBRARY}
-        ${MODELIO_LIBRARY}
-        ${METALKIT_LIBRARY}
-    )
-endif()
-
-# 如果启用了 OpenMP
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(test_inception3_layer PRIVATE OpenMP::OpenMP_CXX)
-endif()
-
-# 添加更多编译选项
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(test_inception3_layer PRIVATE -Wall -Wextra)
-endif()
 ##############################################################################
 
 

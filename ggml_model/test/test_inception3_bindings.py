@@ -42,7 +42,10 @@ def test_single_inference(model_path, batch_size=1, verbose=True):
         return False
 
     # 创建随机输入数据
-    input_data = np.random.rand(batch_size, 7, 100, 221).astype(np.float32)
+    # input_data = np.random.rand(batch_size, 7, 100, 221).astype(np.float32)
+    input_data = np.zeros((batch_size, 7, 100, 221), dtype=np.float32)
+    for i in range(batch_size):
+        input_data[i, :, :, :] = 0.1 * i
 
     # 执行推理
     if verbose:
@@ -54,7 +57,11 @@ def test_single_inference(model_path, batch_size=1, verbose=True):
     if verbose:
         print(f"推理完成，用时: {(end_time - start_time) * 1000:.2f} ms")
         print(f"输出形状: {result.shape}")
-        print(f"输出示例: {result[0][:5]}...")  # 显示第一个样本的前5个分类结果
+        print(f"输出示例: {result[0][:3]}...")  # 显示第一个样本的前3个分类结果
+        for i in range(result.shape[0]):
+            # 格式化输出结果，保留4位小数
+            formatted_result = [f"{value:.6f}" for value in result[i]]
+            print(f"第{i}个:\t {formatted_result}")
 
     # 释放资源
     inc3.free_model(model_id)

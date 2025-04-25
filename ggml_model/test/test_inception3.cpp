@@ -62,17 +62,14 @@ void test_inception3(struct ggml_cgraph* gf, Inception3Model& model, int batch_s
     
     // 设置输入张量，使用随机数据
     // fill_random_input(model);
-    // float * data0 = (float *)malloc( model.width * model.height * model.channels * batch_size);
-    // float * data0 = new float[ggml_nbytes(input)];
-    // for (int i = 0; i < model.width * model.height * model.channels * batch_size; i++) {
-    //     data0[i] = 0.1f;
-    // }
-    // ggml_backend_tensor_set(input, data0, 0, ggml_nbytes(input));
-    // delete[] data0;
-    
+    float * data0 = new float[ggml_nbytes(input)];
     // 执行推理
     for (int i = 0; i < loop_count; i++) {
-        printf("第 %d 次推理...\n", i + 1);
+        printf("第 %d 次:\t", i);
+        for (int j = 0; j < model.width * model.height * model.channels * batch_size; j++) {
+            data0[j] = 0.1f * i;
+        }
+        ggml_backend_tensor_set(input, data0, 0, ggml_nbytes(input));
         const int64_t t_start_ms = ggml_time_ms();
         
         if (ggml_backend_graph_compute(model.backend, gf) != GGML_STATUS_SUCCESS) {
@@ -81,8 +78,13 @@ void test_inception3(struct ggml_cgraph* gf, Inception3Model& model, int batch_s
         }
         
         const int64_t t_end_ms = ggml_time_ms();
-        printf("推理完成，用时: %lld ms\n", t_end_ms - t_start_ms);
+        // printf("推理完成，用时: %lld ms\n", t_end_ms - t_start_ms);
+
+        // 打印输出
+        float* output_data = (float*)ggml_get_data(output);
+        printf("[%1.6f %1.6f %1.6f]\n", output_data[0], output_data[1], output_data[2]);
     }
+    delete[] data0;
 }
 
 int main(int argc, char** argv) {

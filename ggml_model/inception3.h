@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 
+#define DEFAULT_GRAPH_BATCH_SIZE  (64)
+
 // 前向声明
 struct ggml_tensor;
 struct ggml_context;
@@ -96,7 +98,7 @@ public:
     bool load_model(const std::string& fname);
     
     // 构建计算图
-    struct ggml_cgraph* build_graph(int batch_size = 1);
+    struct ggml_cgraph* build_graph(int batch_size = DEFAULT_GRAPH_BATCH_SIZE);
 
     // Getters 和 Setters
     ggml_context* get_context() const;

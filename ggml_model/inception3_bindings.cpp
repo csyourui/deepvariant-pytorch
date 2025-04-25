@@ -76,7 +76,7 @@ public:
         }
         
         // 构建计算图
-        gf = model->build_graph();
+        gf = model->build_graph(DEFAULT_GRAPH_BATCH_SIZE);
         if (!gf) {
             std::cerr << "无法构建计算图" << std::endl;
             ggml_free(ctx_cgraph);
@@ -132,32 +132,56 @@ public:
         }
         
         std::cout << "正在处理批次大小为 " << batch_size << " 的输入" << std::endl;
-        
-        // 设置输入数据
-        float* images_data = static_cast<float*>(buf_info.ptr);
-        ggml_backend_tensor_set(model->images, images_data, 0, batch_size * channels * height * width * sizeof(float));
-        
-        // 执行计算
-        if (ggml_backend_graph_compute(model->backend, gf) != GGML_STATUS_SUCCESS) {
-            throw std::runtime_error("计算图执行失败");
-        }
-        
-        // 获取结果张量
-        struct ggml_tensor* output = model->classification;
-        
         // 创建输出数组
-        int n_classes = output->ne[0];
+        int n_classes = model->classes;
         py::array_t<float> result = py::array_t<float>({batch_size, n_classes});
-        
-        // 获取输出数据
-        float* output_data = static_cast<float*>(ggml_get_data(output));
-        
-        // 复制数据到输出数组
         py::buffer_info result_buf = result.request();
         float* result_ptr = static_cast<float*>(result_buf.ptr);
-        
-        size_t output_size = batch_size * n_classes * sizeof(float);
-        memcpy(result_ptr, output_data, output_size);
+        // 获取结果张量
+        struct ggml_tensor* output = model->classification;
+        // 获取输出数据
+        float* output_data = static_cast<float*>(ggml_get_data(output));
+
+        float* images_data = static_cast<float*>(buf_info.ptr);
+        if (images_data == nullptr) {
+            throw std::runtime_error("输入数据为空");
+        }
+        size_t batch_loop_count = batch_size / DEFAULT_GRAPH_BATCH_SIZE + (batch_size % DEFAULT_GRAPH_BATCH_SIZE > 0 ? 1 : 0);
+        size_t last_batch_size = batch_size % DEFAULT_GRAPH_BATCH_SIZE;
+        for (size_t i = 0; i < batch_loop_count; i++) {
+            if (i == batch_loop_count - 1 && last_batch_size > 0) {
+                std::cout << "最后一批次大小: " << last_batch_size << std::endl;
+                ggml_backend_tensor_set(
+                    model->images, 
+                    images_data + i * DEFAULT_GRAPH_BATCH_SIZE * channels * height * width,
+                    0, 
+                    last_batch_size * channels * height * width * sizeof(float)
+                );
+            } else {
+                std::cout << "第 " << i + 1 << " 批次大小: " << DEFAULT_GRAPH_BATCH_SIZE << std::endl;
+                ggml_backend_tensor_set(
+                    model->images, 
+                    images_data + i * DEFAULT_GRAPH_BATCH_SIZE * channels * height * width,
+                    0, 
+                    DEFAULT_GRAPH_BATCH_SIZE * channels * height * width * sizeof(float)
+                );
+            }
+            if (ggml_backend_graph_compute(model->backend, gf) != GGML_STATUS_SUCCESS) {
+                throw std::runtime_error("计算图执行失败");
+            }
+            
+            // 复制数据到输出数组
+            size_t output_data_offset = i * DEFAULT_GRAPH_BATCH_SIZE * n_classes;
+            size_t output_size = (i == batch_loop_count - 1 && last_batch_size > 0) ? last_batch_size : DEFAULT_GRAPH_BATCH_SIZE;
+            size_t output_data_size = output_size * n_classes;
+            if (output_data == nullptr) {
+                throw std::runtime_error("输出数据为空");
+            }
+            if (output_data_offset + output_data_size > result_buf.size) {
+                std::cout << "输出数据超出范围: " << output_data_offset << " + " << output_data_size << " > " << result_buf.size << std::endl;
+                throw std::runtime_error("输出数据超出范围");
+            }
+            memcpy(result_ptr + output_data_offset, output_data, output_data_size * sizeof(float));        }
         
         return result;
     }
