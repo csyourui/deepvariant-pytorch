@@ -23,6 +23,32 @@ Run python bindings test usage
 python ../test/test_inception3_bindings.py ../../data/gguf_model/deepvariant.gguf
 ```
 
+## 🧪 Inference GGML Moldel
+### Run GGML Model with test data
+```bash
+uv run python inference_ggml.py --model data/gguf_model/deepvariant.gguf --test_data data/test/validation_set.with_label.tfrecord-00000-of-00024.gz  --num_samples 2468
+```
+
+### GGML Model Performance
+```
+              precision    recall  f1-score   support
+
+           0     1.0000    0.9336    0.9657       256
+           1     0.9792    1.0000    0.9895      1320
+           2     1.0000    0.9877    0.9938       892
+
+    accuracy                         0.9887      2468
+   macro avg     0.9931    0.9738    0.9830      2468
+weighted avg     0.9889    0.9887    0.9886      2468
+```
+
+### Confusion Matrices
+
+<div align="center">
+  <p><strong>GGML Confusion Matrix</strong></p>
+  <img src="../data/ggml_confusion_matrix.png" alt="GGML Confusion Matrix" width="400"/>
+</div>
+
 ## 📊 Test list
 
 | Test Name | Status | Description |
@@ -35,6 +61,7 @@ python ../test/test_inception3_bindings.py ../../data/gguf_model/deepvariant.ggu
 | ✅ Python Bindings Equivalence | PASS | Python API results match C++ test results |
 | ✅ Metal Acceleration | PASS | Apple Metal acceleration for GGML model |
 | ✅ Thread Safety | PASS | Thread safety verification for concurrent API calls |
+| ✅ Inference Validation Set | PASS | Inference results match PyTorch reference |
 | ⚠️ Layer Accuracy | MINOR DIFF | **ALL** layer output has slight numerical differences compared to PyTorch reference |
 | ❌ Python Bindings Library C++ | FAIL | Fail to load bindings-library with running C++ test |
 | ❓ Memory Leak Check | TODO | Memory usage analysis for long-running operations |

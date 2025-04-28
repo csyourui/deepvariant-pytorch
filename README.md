@@ -109,6 +109,19 @@ weighted avg     0.9893    0.9891    0.9890      2468
 weighted avg     0.9893    0.9891    0.9890      2468
 ```
 
+### GGML Model Performance
+```
+              precision    recall  f1-score   support
+
+           0     1.0000    0.9336    0.9657       256
+           1     0.9792    1.0000    0.9895      1320
+           2     1.0000    0.9877    0.9938       892
+
+    accuracy                         0.9887      2468
+   macro avg     0.9931    0.9738    0.9830      2468
+weighted avg     0.9889    0.9887    0.9886      2468
+```
+
 ### Confusion Matrices
 
 <div align="center">
@@ -117,6 +130,9 @@ weighted avg     0.9893    0.9891    0.9890      2468
   
   <p><strong>TensorFlow Confusion Matrix</strong></p>
   <img src="./data/tf_confusion_matrix.png" alt="TensorFlow Confusion Matrix" width="400"/>
+
+  <p><strong>GGML Confusion Matrix</strong></p>
+  <img src="./data/ggml_confusion_matrix.png" alt="GGML Confusion Matrix" width="400"/>
 </div>
 
 ## 🔮 Future Development Plans
