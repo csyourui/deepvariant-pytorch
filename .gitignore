@@ -13,6 +13,7 @@ wheels/
 data/py_model/*
 data/tf_model/*
 data/gguf_model/*
+data/onnx_model/*
 data/test/*
 
 # tiny_cnn test dir
@@ -21,7 +22,8 @@ tiny_cnn
 # Keep empty directories
 !data/pt_model/.gitkeep
 !data/tf_model/.gitkeep
-data/gguf_model/.gitkeep
+!data/gguf_model/.gitkeep
+!data/onnx_model/.gitkeep
 !data/test/.gitkeep
 
 # vscode
