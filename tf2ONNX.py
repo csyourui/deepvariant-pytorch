@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-将TensorFlow的inception模型转换为ONNX格式
+Convert TensorFlow inception model to ONNX format
 """
 
 import argparse
@@ -22,54 +22,74 @@ INPUT_SHAPE = (100, 221, 7)
 
 def convert_tf_to_onnx(tf_model, onnx_model_path):
     """
-    将TensorFlow格式的模型转换为ONNX格式
+    Convert TensorFlow model to ONNX format with support for dynamic batch_size
 
     Args:
-        tf_model: TensorFlow模型文件
-        onnx_model_path: 输出的ONNX模型文件路径
+        tf_model: TensorFlow model file
+        onnx_model_path: Output ONNX model file path
     """
 
-    # 输出模型摘要信息
+    # Output model summary
     tf_model.summary()
 
-    # 获取模型输入形状并处理None批次大小
+    # Get model input shape
     input_shape = tf_model.input_shape
-    print(f"原始模型输入形状: {input_shape}")
+    print(f"Original model input shape: {input_shape}")
 
-    # 将None替换为1（批次大小）
+    # Keep batch size as None, but use batch_size=1 for creating example input
     concrete_input_shape = list(input_shape)
     if concrete_input_shape[0] is None:
         concrete_input_shape[0] = 1
 
-    print(f"使用的模型输入形状: {concrete_input_shape}")
+    print(f"Model input shape used for testing: {concrete_input_shape}")
 
-    # 创建一个示例输入数据
-    if len(concrete_input_shape) == 4:  # 图像输入 (batch_size, height, width, channels)
+    # Create sample input data (for testing only)
+    if (
+        len(concrete_input_shape) == 4
+    ):  # Image input (batch_size, height, width, channels)
         dummy_input = np.random.random(concrete_input_shape).astype(np.float32)
     else:
-        print(f"警告: 不常见的输入形状: {concrete_input_shape}，请手动调整示例输入")
+        print(
+            f"Warning: Unusual input shape: {concrete_input_shape}, please adjust sample input manually"
+        )
         dummy_input = np.random.random(concrete_input_shape).astype(np.float32)
 
-    # 转换为ONNX
-    print("转换模型为ONNX格式...")
+    # Convert to ONNX
+    print("Converting model to ONNX format...")
 
-    # 指定输入和输出名称，使用具体的batch大小
-    input_signature = [tf.TensorSpec(concrete_input_shape, tf.float32, name="input")]
+    # Get dynamic input shape (None replaced by "batch")
+    dynamic_input_shape = list(input_shape)
+    if dynamic_input_shape[0] is None:
+        dynamic_input_shape[0] = "batch"
 
-    # 转换模型，指定动态轴（第一个维度）
+    # Specify input signature with dynamic batch size
+    input_signature = [tf.TensorSpec(shape=input_shape, dtype=tf.float32, name="input")]
+
+    # Define dynamic axes mapping, specify first dimension as dynamic
+    dynamic_axes = {"input": {0: "batch"}}
+    for i, output in enumerate(tf_model.outputs):
+        output_name = (
+            f"output_{i}" if not hasattr(output, "name") else output.name.split(":")[0]
+        )
+        dynamic_axes[output_name] = {0: "batch"}
+
+    # Convert model with explicit dynamic axes
     onnx_model, _ = tf2onnx.convert.from_keras(
-        tf_model, input_signature=input_signature, opset=13, output_path=onnx_model_path
+        tf_model,
+        input_signature=input_signature,
+        opset=13,
+        output_path=onnx_model_path,
     )
 
-    print(f"ONNX模型已保存至: {onnx_model_path}")
+    print(f"ONNX model saved to: {onnx_model_path}")
 
-    # 验证ONNX模型
+    # Validate ONNX model
     try:
         import onnxruntime as ort
 
-        print("验证ONNX模型...")
+        print("Validating ONNX model...")
 
-        # 使用ONNX Runtime进行推理
+        # Use ONNX Runtime for inference
         sess_options = ort.SessionOptions()
         sess_options.graph_optimization_level = (
             ort.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -77,27 +97,41 @@ def convert_tf_to_onnx(tf_model, onnx_model_path):
         sess = ort.InferenceSession(onnx_model_path, sess_options)
 
         input_name = sess.get_inputs()[0].name
-        result = sess.run(None, {input_name: dummy_input})
 
-        # 使用原始TensorFlow模型进行推理
+        # Validate single example
+        result = sess.run(None, {input_name: dummy_input})
         tf_result = tf_model.predict(dummy_input)
 
-        # 比较结果
-        print(f"TensorFlow输出形状: {tf_result.shape}, ONNX输出形状: {result[0].shape}")
+        # Compare results
+        print(
+            f"TensorFlow output shape: {tf_result.shape}, ONNX output shape: {result[0].shape}"
+        )
 
-        # 输出结果样本进行直观比较
-        print(f"TensorFlow样本输出: {tf_result[0, :3]}")
-        print(f"ONNX样本输出: {result[0][0, :3]}")
+        # Output sample results for visual comparison
+        print(f"TensorFlow sample output: {tf_result[0, :3]}")
+        print(f"ONNX sample output: {result[0][0, :3]}")
 
-        # 进行结果比较，容忍小误差
+        # Compare results with tolerance for small errors
         np.testing.assert_allclose(result[0], tf_result, rtol=1e-5, atol=1e-5)
-        print("验证成功! TensorFlow和ONNX模型输出一致。")
-    except ImportError:
-        print("警告: 未安装onnxruntime，跳过模型验证步骤。")
-    except Exception as e:
-        print(f"模型验证失败: {e}")
+        print("Single sample validation successful!")
 
-    print("转换完成!")
+        # Additional test with different batch_size
+        batch_size = 3
+        larger_input = np.random.random(
+            (batch_size,) + tuple(concrete_input_shape[1:])
+        ).astype(np.float32)
+        larger_result = sess.run(None, {input_name: larger_input})
+        print(
+            f"Validation passed with batch_size={batch_size}, output shape: {larger_result[0].shape}"
+        )
+
+        print("Validation successful! Model supports dynamic batch_size.")
+    except ImportError:
+        print("Warning: onnxruntime not installed, skipping model validation step.")
+    except Exception as e:
+        print(f"Model validation failed: {e}")
+
+    print("Conversion complete!")
     return onnx_model_path
 
 
@@ -132,11 +166,16 @@ def main():
     parser.add_argument(
         "--weights",
         type=str,
-        required=True,
+        # required=True,
+        default="data/tf_model/deepvariant.wgs.ckpt",
         help="输入的TensorFlow模型文件路径 (.h5或检查点文件)",
     )
     parser.add_argument(
-        "--output", type=str, required=True, help="输出的ONNX模型文件路径"
+        "--output",
+        type=str,
+        # required=True,
+        default="data/onnx_model/deepvariant.onnx",
+        help="输出的ONNX模型文件路径",
     )
     args = parser.parse_args()
 
@@ -146,7 +185,7 @@ def main():
 
     # 检查输入文件是否存在
     if not os.path.exists(input_path) and not os.path.exists(input_path + ".index"):
-        print(f"错误: 找不到输入文件 {input_path}")
+        print(f"Error: Input file not found {input_path}")
         return 1
 
     try:

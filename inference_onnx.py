@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 def load_data_with_tfrecord(data_path):
-    # 定义 TFRecord 的解析规则
+    # Define the parsing rules for TFRecord
     description = {
         "image/encoded": "byte",
         "label": "int",
     }
 
-    # 使用 TFRecordDataset 加载数据
+    # Load data using TFRecordDataset
     dataset = TFRecordDataset(
         data_path,
         compression_type="gzip",
@@ -39,13 +39,13 @@ def load_data_with_tfrecord(data_path):
     labels = []
 
     for record in dataset:
-        # 解码图像
+        # Decode the image
         image = np.frombuffer(record["image/encoded"], dtype=np.uint8).reshape(
             INPUT_SHAPE
         )
-        # 归一化
+        # Normalize
         image = (image - 128.0) / 128.0
-        # 获取标签
+        # Get the label
         label = np.frombuffer(record["label"], dtype=np.int64)
         label = label.reshape(-1)
 
@@ -63,49 +63,49 @@ def load_data_with_tfrecord(data_path):
 
 def load_onnx_model(model_path):
     """
-    加载ONNX模型
+    Load ONNX model
 
     Args:
-        model_path: ONNX模型文件路径
+        model_path: Path to the ONNX model file
 
     Returns:
-        加载的ONNX模型会话
+        Loaded ONNX model session
     """
-    logger.info(f"加载ONNX模型: {model_path}")
+    logger.info(f"Loading ONNX model: {model_path}")
     try:
-        # 设置ONNX Runtime会话选项
+        # Set ONNX Runtime session options
         sess_options = ort.SessionOptions()
         sess_options.graph_optimization_level = (
             ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         )
 
-        # 创建推理会话
+        # Create inference session
         session = ort.InferenceSession(model_path, sess_options)
-        logger.info("ONNX模型加载成功")
+        logger.info("ONNX model loaded successfully")
 
-        # 输出模型输入和输出信息
+        # Output model input and output information
         input_details = session.get_inputs()
         output_details = session.get_outputs()
-        logger.info(f"模型输入: {[input.name for input in input_details]}")
-        logger.info(f"模型输入形状: {[input.shape for input in input_details]}")
-        logger.info(f"模型输出: {[output.name for output in output_details]}")
+        logger.info(f"Model inputs: {[input.name for input in input_details]}")
+        logger.info(f"Model input shapes: {[input.shape for input in input_details]}")
+        logger.info(f"Model outputs: {[output.name for output in output_details]}")
 
         return session
     except Exception as e:
-        logger.error(f"加载ONNX模型失败: {e}")
+        logger.error(f"Failed to load ONNX model: {e}")
         raise
 
 
-def prepare_batch_input(images, batch_size=32):
+def prepare_batch_input(images, batch_size=256):
     """
-    准备批量输入数据，调整为ONNX模型期望的格式
+    Prepare batch input data, adjusting to the format expected by the ONNX model
 
     Args:
-        images: 图像数据数组
-        batch_size: 批处理大小
+        images: Array of image data
+        batch_size: Batch size
 
     Returns:
-        调整后的数据批次列表
+        List of batches, each with shape [batch_size, height, width, channels]
     """
     num_samples = len(images)
     batches = []
@@ -113,142 +113,126 @@ def prepare_batch_input(images, batch_size=32):
     for i in range(0, num_samples, batch_size):
         end = min(i + batch_size, num_samples)
         batch_images = images[i:end]
-
-        # 调整输入维度顺序以匹配模型期望 [batch_size, height, width, channels]
-        # 但ONNX模型期望单个样本: [1, height, width, channels]
-        adjusted_batch = []
-        for img in batch_images:
-            # 将单个样本添加为独立的批次
-            # 注意：不改变维度顺序，因为ONNX模型期望 [1, height, width, channels]，与原始TF模型一致
-            adjusted_batch.append(np.expand_dims(img, axis=0))
-
-        batches.append(adjusted_batch)
+        batches.append(batch_images)
 
     return batches
 
 
 def run_inference_onnx(session, image_array):
     """
-    使用ONNX模型进行推理
+    Run inference using ONNX model
 
     Args:
-        session: ONNX Runtime会话
-        image_array: 预处理后的图像数据 (N, H, W, C)
+        session: ONNX Runtime session
+        image_array: Preprocessed image data (N, H, W, C)
 
     Returns:
-        推理结果和推理时间
+        Inference results and inference time
     """
-    logger.info(f"开始对 {len(image_array)} 个样本进行推理")
+    logger.info(f"Starting inference for {len(image_array)} samples")
 
-    # 获取模型输入名称
+    # Get model input name
     input_name = session.get_inputs()[0].name
 
-    # 记录开始时间
+    # Record start time
     start_time = time.time()
 
     try:
-        # 为每个样本单独进行推理，然后合并结果
+        # Prepare batch data
+        batches = prepare_batch_input(image_array)
         all_results = []
 
-        # 准备批次数据
-        batches = prepare_batch_input(image_array, batch_size=32)
-
         for batch in batches:
-            batch_results = []
-            for single_sample in batch:
-                # 运行推理，每次一个样本
-                outputs = session.run(None, {input_name: single_sample})
-                # 获取输出并添加到结果
-                batch_results.append(outputs[0])
+            # Run inference on the entire batch
+            outputs = session.run(None, {input_name: batch})
+            # Add batch results to total results
+            all_results.append(outputs[0])
 
-            # 合并批次结果
-            all_results.extend(batch_results)
+        # Merge all results
+        all_outputs = np.vstack(all_results)
 
-        # 将所有结果堆叠为一个数组
-        all_outputs = np.vstack([result for result in all_results])
-
-        # 应用softmax获取概率
+        # Apply softmax to get probabilities
         probabilities = softmax(all_outputs, axis=1)
 
-        # 计算推理时间
+        # Calculate inference time
         end_time = time.time()
-        inference_time = (end_time - start_time) * 1000  # 转换为毫秒
+        inference_time = (end_time - start_time) * 1000  # Convert to milliseconds
 
-        logger.info(f"推理完成，耗时: {inference_time:.2f} 毫秒")
-        logger.info(f"预测结果形状: {probabilities.shape}")
+        logger.info(f"Inference completed, time taken: {inference_time:.2f} ms")
+        logger.info(f"Prediction results shape: {probabilities.shape}")
 
         return probabilities, inference_time
     except Exception as e:
-        logger.error(f"推理过程中发生错误: {e}")
+        logger.error(f"Error occurred during inference: {e}")
         raise
 
 
 def main():
-    parser = argparse.ArgumentParser(description="使用ONNX模型进行推理")
+    parser = argparse.ArgumentParser(description="Use ONNX model for inference")
     parser.add_argument(
         "--model",
         type=str,
         default="./data/onnx_model/inception.onnx",
-        help="ONNX模型路径",
+        help="Path to ONNX model",
     )
     parser.add_argument(
         "--test_data",
         type=str,
         default="./data/test/validation_set.with_label.tfrecord-00000-of-00024.gz",
-        help="测试数据路径",
+        help="Path to test data",
     )
 
     args = parser.parse_args()
 
-    # 检查文件路径是否存在
+    # Check if file paths exist
     if not os.path.exists(args.model):
-        logger.error(f"模型文件不存在: {args.model}")
+        logger.error(f"Model file does not exist: {args.model}")
         return
 
     if not os.path.exists(args.test_data):
-        logger.error(f"测试数据文件不存在: {args.test_data}")
+        logger.error(f"Test data file does not exist: {args.test_data}")
         return
 
     try:
-        # 加载ONNX模型
+        # Load ONNX model
         session = load_onnx_model(args.model)
 
-        # 加载测试数据
+        # Load test data
         images, labels = load_data_with_tfrecord(args.test_data)
 
-        logger.info(f"对 {len(images)} 个样本进行推理")
+        logger.info(f"Running inference on {len(images)} samples")
 
-        # 进行推理
+        # Perform inference
         probabilities, inference_time = run_inference_onnx(session, images)
 
-        # 输出推理结果统计
-        logger.info(f"推理完成，总耗时: {inference_time:.2f} 毫秒")
-        logger.info(f"平均每个样本耗时: {inference_time / len(images):.2f} 毫秒")
+        # Output inference result statistics
+        logger.info(f"Inference completed, total time: {inference_time:.2f} ms")
+        logger.info(f"Average time per sample: {inference_time / len(images):.2f} ms")
 
-        # 计算预测类别
+        # Calculate predicted classes
         predictions = np.argmax(probabilities, axis=1)
 
-        # 计算准确率
+        # Calculate accuracy
         accuracy = np.mean(predictions == labels)
-        logger.info(f"准确率: {accuracy:.4f}")
+        logger.info(f"Accuracy: {accuracy:.4f}")
 
-        # 计算混淆矩阵
+        # Calculate confusion matrix
         cm = confusion_matrix(labels, predictions)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1, 2])
 
-        # 生成分类报告
+        # Generate classification report
         report = classification_report(labels, predictions, digits=4)
         logger.info("\nONNX Classification Report:\n%s", report)
 
-        # 绘制混淆矩阵并保存
+        # Plot and save confusion matrix
         disp.plot()
         plt.title("ONNX Confusion Matrix")
         confusion_matrix_path = "data/onnx_confusion_matrix.png"
         plt.savefig(confusion_matrix_path, dpi=300)
-        logger.info(f"混淆矩阵已保存至: {confusion_matrix_path}")
+        logger.info(f"Confusion matrix saved to: {confusion_matrix_path}")
 
     except Exception as e:
-        logger.error(f"执行过程中发生错误: {e}")
+        logger.error(f"Error occurred during execution: {e}")
         import traceback
 
         traceback.print_exc()

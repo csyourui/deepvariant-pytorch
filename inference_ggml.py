@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 def load_data_with_tfrecord(data_path):
-    # 定义 TFRecord 的解析规则
+    # Define TFRecord parsing rules
     description = {
         "image/encoded": "byte",
         "label": "int",
     }
 
-    # 使用 TFRecordDataset 加载数据
+    # Load data using TFRecordDataset
     dataset = TFRecordDataset(
         data_path,
         compression_type="gzip",
@@ -40,15 +40,15 @@ def load_data_with_tfrecord(data_path):
     labels = []
 
     for record in dataset:
-        # 解码图像
+        # Decode image
         image = np.frombuffer(record["image/encoded"], dtype=np.uint8).reshape(
             INPUT_SHAPE
         )
-        # 转换维度顺序: (height, width, channels) -> (channels, height, width)
+        # Convert dimension order: (height, width, channels) -> (channels, height, width)
         image = np.transpose(image, (2, 0, 1))
-        # 归一化
+        # Normalize
         image = (image - 128.0) / 128.0
-        # 获取标签
+        # Get label
         label = np.frombuffer(record["label"], dtype=np.int64)
         label = label.reshape(-1)
 
@@ -66,45 +66,47 @@ def load_data_with_tfrecord(data_path):
 
 def load_model(model_path):
     """
-    加载GGML模型
+    Load GGML model
 
     Args:
-        model_path: GGUF模型文件路径
+        model_path: GGUF model file path
 
     Returns:
-        加载的模型
+        Loaded model
     """
-    logger.info(f"加载模型: {model_path}")
+    logger.info(f"Loading model: {model_path}")
     try:
         model = InceptionV3GGML(model_path)
         return model
     except Exception as e:
-        logger.error(f"加载模型失败: {e}")
+        logger.error(f"Failed to load model: {e}")
         raise
 
 
 def run_inference(model, image_array):
     """
-    使用GGML模型进行推理
+    Run inference using GGML model
 
     Args:
-        model: 加载的InceptionV3GGML模型
-        image_array: 预处理后的图像数据
+        model: Loaded InceptionV3GGML model
+        image_array: Preprocessed image data
 
     Returns:
-        推理结果
+        Inference results
     """
     logger.info(f"Starting inference on {image_array.shape[0]} samples")
 
-    # 进行推理
+    # Run inference
     start_time = datetime.now()
     try:
         outputs = model(image_array)
         outputs = softmax(outputs, axis=1)
         end_time = datetime.now()
 
-        # 计算推理时间
-        inference_time = (end_time - start_time).total_seconds() * 1000  # 转换为毫秒
+        # Calculate inference time
+        inference_time = (
+            end_time - start_time
+        ).total_seconds() * 1000  # Convert to milliseconds
 
         logger.info(f"Inference completed in {inference_time:.2f} ms")
         logger.info(f"Predictions shape: {outputs.shape}")
@@ -137,7 +139,7 @@ def main():
 
     args = parser.parse_args()
 
-    # 检查文件路径是否存在
+    # Check if file paths exist
     if not os.path.exists(args.model):
         logger.error(f"Model file does not exist: {args.model}")
         return
@@ -147,30 +149,34 @@ def main():
         return
 
     try:
-        # 加载模型
+        # Load model
         model = load_model(args.model)
 
-        # 加载测试数据
+        # Load test data
         images, labels = load_data_with_tfrecord(args.test_data)
 
-        # 限制样本数量
+        # Limit sample count
         if args.num_samples > 0 and args.num_samples < len(images):
             images = images[: args.num_samples]
             labels = labels[: args.num_samples]
 
         logger.info(f"Running inference on {len(images)} samples")
 
-        # 进行推理
+        # Run inference
         outputs, inference_time = run_inference(model, images)
 
-        # 输出推理结果
-        logger.info(f"推理完成，总耗时: {inference_time:.2f} 毫秒")
-        logger.info(f"平均每个样本耗时: {inference_time / len(images):.2f} 毫秒")
+        # Output inference results
         logger.info(
-            f"预测输出形状: {outputs.shape if hasattr(outputs, 'shape') else 'unknown'}"
+            f"Inference completed, total time: {inference_time:.2f} milliseconds"
+        )
+        logger.info(
+            f"Average time per sample: {inference_time / len(images):.2f} milliseconds"
+        )
+        logger.info(
+            f"Prediction output shape: {outputs.shape if hasattr(outputs, 'shape') else 'unknown'}"
         )
 
-        # 计算混淆矩阵和分类报告
+        # Calculate confusion matrix and classification report
         predictions = np.argmax(outputs, axis=1)
         m = confusion_matrix(labels, predictions)
         disp = ConfusionMatrixDisplay(confusion_matrix=m, display_labels=[0, 1, 2])
@@ -181,7 +187,7 @@ def main():
         plt.savefig("./data/ggml_confusion_matrix.png", dpi=300)
 
     except Exception as e:
-        logger.error(f"执行过程中发生错误: {e}")
+        logger.error(f"Error occurred during execution: {e}")
         import traceback
 
         traceback.print_exc()

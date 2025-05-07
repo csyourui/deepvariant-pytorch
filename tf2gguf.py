@@ -6,7 +6,6 @@ import gguf
 import numpy as np
 import tensorflow as tf
 
-# 导入 inceptionv3 定义
 from tensorflow_model.keras_modeling import inceptionv3 as tf_inception_v3
 
 NUM_CLASSES = 3
@@ -40,7 +39,7 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
     """
 
     for weight in tf_layer.weights:
-        # 获取权重名称和值
+        # get weight name and value
         layer_name = tf_layer.name
         weight_name = weight.name.split("/")[-1].split(":")[0]
         weight_value = weight.numpy()
@@ -48,9 +47,9 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
             f"\t tf: Layer: {layer_name}, Weight: {weight_name}, Shape: {weight_value.shape}, size: {weight_value.size}"
         )
 
-        # 根据权重类型进行特殊处理
+        # handle different types of layers
         if "kernel" in weight_name and "conv2d" in layer_name:
-            # 卷积层权重需要转置为 GGUF 格式
+            # Convolutional layer weights need to be transposed to GGUF format
             if len(weight_value.shape) == 4:
                 # TensorFlow: [H, W, input_channels, output_channels]
                 # GGUF: [output_channels, input_channels, H, W]
@@ -58,16 +57,16 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
             weight_value = weight_value.astype(np.float16)
 
         if "batch_normalization" in layer_name:
-            # 批归一化层权重需要转置为 GGUF 格式
+            # Batch normalization layer weights need to be transposed to GGUF format
             if len(weight_value.shape) == 1:
                 weight_value = weight_value.reshape((1, -1, 1, 1))  # [1, 1, C, N]
-            # 如果是 moving_variance，则需要加上一个小的常数eps以避免除零错误
+            # If it's moving_variance, add a small constant eps to avoid division by zero error
             if "moving_variance" in weight_name:
                 weight_value = weight_value + tf_layer.epsilon
             weight_value = weight_value.astype(np.float32)
 
         if "kernel" in weight_name and "classification" in layer_name:
-            # 全连接层权重需要转置为 GGUF 格式
+            # Fully connected layer weights need to be transposed to GGUF format
             if len(weight_value.shape) == 2:
                 # TensorFlow: [input_size, output_size]
                 # GGUF: [output_size, input_size]
@@ -82,10 +81,10 @@ def save_layer_params(gguf_writer, tf_layer, prefix):
                 weight_value = weight_value.reshape((1, 1, 1, weight_value.shape[0]))
             weight_value = weight_value.astype(np.float32)
 
-        # 构造 GGUF 参数名称
+        # construct GGUF tensor name
         gguf_name = f"{prefix}_{weight_name}"
 
-        # 添加张量到 GGUF 文件
+        # add tensor to GGUF writer
         gguf_writer.add_tensor(gguf_name, weight_value, raw_shape=weight_value.shape)
 
         print(f"\t gg: Added tensor: {gguf_name} with shape {weight_value.shape}")
@@ -99,16 +98,16 @@ def tf2gguf(tf_model, output_path):
         tf_model: TensorFlow inceptionv3 模型
         output_path: 输出 GGUF 文件路径
     """
-    # 创建 GGUF 写入器
+    # create GGUF writer
     model_name = os.path.basename(output_path).split(".")[0]
     gguf_writer = gguf.GGUFWriter(output_path, model_name)
 
-    # 遍历模型的所有层
+    # traverse all layers in the model
     for i, layer in enumerate(tf_model.layers):
         print(
             "-------------------------------------------------------------------------"
         )
-        # 跳过非参数化层
+        # skip layers without weights
         if not layer.weights:
             print(f"Skipping layer: {layer.name}")
             continue
@@ -117,71 +116,69 @@ def tf2gguf(tf_model, output_path):
             f"Processing layer: {layer.name}, Type: {layer.__class__.__name__}, weight blocks: {len(layer.weights)}"
         )
 
-        # 保存层参数
+        # save layer parameters
         save_layer_params(gguf_writer, layer, layer.name)
 
-    # 写入 GGUF 文件
+    # write GGUF header
     gguf_writer.write_header_to_file()
     gguf_writer.write_kv_data_to_file()
     gguf_writer.write_tensors_to_file()
     gguf_writer.close()
 
     print("-------------------------------------------------------------------------")
-    print(f"模型已成功转换为 GGUF 格式: {output_path}")
+    print(f"Model successfully converted to GGUF format: {output_path}")
     return output_path
 
 
 def test_model_conversion(tf_model, gguf_path):
     """
-    测试模型转换是否成功，使用相同的输入数据比较输出。
+    Test if model conversion is successful by comparing outputs with the same input data.
 
     Args:
-        tf_model: 原始 TensorFlow 模型
-        gguf_path: 转换后的 GGUF 模型路径
+        tf_model: Original TensorFlow model
+        gguf_path: Path to the converted GGUF model
     """
-    print("\n==== 验证模型转换 ====")
+    print("\n==== Validating Model Conversion ====")
 
-    # 验证 GGUF 文件是否存在
+    # Verify if GGUF file exists
     if os.path.exists(gguf_path):
         file_size_mb = os.path.getsize(gguf_path) / (1024 * 1024)
-        print(f"GGUF 模型文件大小: {file_size_mb:.2f} MB")
-        print("GGUF 模型文件已成功创建！")
+        print(f"GGUF model file size: {file_size_mb:.2f} MB")
+        print("GGUF model file was successfully created!")
     else:
-        print("错误：GGUF 模型文件未创建！")
+        print("Error: GGUF model file was not created!")
         return
 
     display_gguf_info(gguf_path)
-    # 创建随机测试输入
-    np.random.seed(42)  # 设置随机种子以保证结果可重现
+    # Create random test input
+    np.random.seed(42)  # Set random seed to ensure reproducibility
     test_input = np.random.random((1, 100, 221, 7)).astype(np.float32)
     test_input = 0.1 * np.ones((1, 100, 221, 7), dtype=np.float32)
-    print(f"测试输入形状: {test_input.shape}")
+    print(f"Test input shape: {test_input.shape}")
 
-    # 获取 TensorFlow 模型预测结果
+    # Get TensorFlow model prediction results
     tf_output = tf_model.predict(test_input)
-    print(f"TensorFlow 模型输出形状: {tf_output.shape}")
-    print(f"TensorFlow 预测概率: {tf_output[0]}")
-    print(f"预测类别: {np.argmax(tf_output[0])}")
+    print(f"TensorFlow model output shape: {tf_output.shape}")
+    print(f"TensorFlow prediction probabilities: {tf_output[0]}")
+    print(f"Predicted class: {np.argmax(tf_output[0])}")
 
 
 def display_gguf_info(gguf_path):
-    """显示 GGUF 模型的基本信息"""
-    # 读取 GGUF 文件
+    """Display the basic information of GGUF model"""
+    # Read GGUF file
     reader = gguf.GGUFReader(gguf_path)
 
-    # 显示基本信息
-    # print(f"模型名称: {reader.name}")
-    # print(f"模型架构: {reader.arch}")
-    print(f"张量数量: {len(reader.tensors)}")
+    # Display basic information
+    print(f"Number of tensors: {len(reader.tensors)}")
 
-    # 列出所有张量
-    print("\n张量列表:")
+    # List all tensors
+    print("\nTensor list:")
     for i, _ in enumerate(reader.tensors):
         tensor = reader.get_tensor(i)
         print(f"{i}. {tensor.name}: {tensor.shape}:{tensor.tensor_type}")
 
-    # 列出元数据
-    print("\n模型元数据:")
+    # List metadata
+    print("\nModel metadata:")
     for key in reader.fields:
         print(f"{key}: {reader.fields[key]}")
 
@@ -213,12 +210,12 @@ def main():
     args = parser.parse_args()
 
     tf_model = tf_inception_v3(weights=args.weights)
-    # 转换为 GGUF 格式
+    # convert TensorFlow model to GGUF format
     gguf_path = tf2gguf(tf_model, args.output)
 
-    # 测试模型转换
+    # test the conversion
     test_model_conversion(tf_model, gguf_path)
-    print("\n转换和测试完成！")
+    print("\nConversion and testing completed!")
 
 
 if __name__ == "__main__":
